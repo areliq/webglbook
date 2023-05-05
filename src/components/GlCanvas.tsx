@@ -39,6 +39,7 @@ class WebGL2Square {
     [key: string]: number
   }
   private squareIndices = [0, 1, 2, 0, 2, 3]  // counter-clockwise
+  private vao: WebGLVertexArrayObject
 
   constructor(canvas: HTMLCanvasElement | null) {
     const context = canvas?.getContext('webgl2')
@@ -53,11 +54,17 @@ class WebGL2Square {
       throw new Error('Failed to create WebGL2 program')
     }
 
+    const vao = context.createVertexArray()
+
+    if (!vao) {
+      throw new Error('Failed to create Vertex Array Object')
+    }
+
     this.ctx = context
     this.program = program
-
-    this.buffers = this.getBuffersForSquare()
+    this.vao = vao
     this.locations = this.getLocations()
+    this.buffers = this.getBuffersForSquare()
   }
 
   private assignShader(source: string, type: 'vertex' | 'fragment') {
@@ -107,17 +114,23 @@ class WebGL2Square {
       ...topLeft, ...bottomLeft, ...bottomRight, ...topRight
     ]
 
+    this.ctx.bindVertexArray(this.vao)
+
     // Setup Vertex Buffer Object
     const vbo = this.ctx.createBuffer()
     this.ctx.bindBuffer(this.ctx.ARRAY_BUFFER, vbo)
     this.ctx.bufferData(this.ctx.ARRAY_BUFFER, new Float32Array(vertices), this.ctx.STATIC_DRAW)
 
+    this.ctx.enableVertexAttribArray(this.locations['aVertexPosition'])
+    this.ctx.vertexAttribPointer(this.locations['aVertexPosition'], 3, this.ctx.FLOAT, false, 0, 0)
+    
     // Setup Index Buffer Object
     const ibo = this.ctx.createBuffer()
     this.ctx.bindBuffer(this.ctx.ELEMENT_ARRAY_BUFFER, ibo)
     this.ctx.bufferData(this.ctx.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.squareIndices), this.ctx.STATIC_DRAW)
 
     // Clear used buffer
+    this.ctx.bindVertexArray(null)
     this.ctx.bindBuffer(this.ctx.ARRAY_BUFFER, null)
     this.ctx.bindBuffer(this.ctx.ELEMENT_ARRAY_BUFFER, null)
 
@@ -137,15 +150,14 @@ class WebGL2Square {
     this.ctx.clear(this.ctx.COLOR_BUFFER_BIT | this.ctx.DEPTH_BUFFER_BIT)
     this.ctx.viewport(0, 0, this.ctx.canvas.width, this.ctx.canvas.height)
 
-    this.ctx.bindBuffer(this.ctx.ARRAY_BUFFER, this.buffers.vertex)
-    this.ctx.vertexAttribPointer(this.locations['aVertexPosition'], 3, this.ctx.FLOAT, false, 0, 0)
-    this.ctx.enableVertexAttribArray(this.locations['aVertexPosition'])
+    this.ctx.bindVertexArray(this.vao)
 
     this.ctx.bindBuffer(this.ctx.ELEMENT_ARRAY_BUFFER, this.buffers.index)
 
     this.ctx.drawElements(this.ctx.TRIANGLES, this.squareIndices.length, this.ctx.UNSIGNED_SHORT, 0)
     
     // Clear used buffer
+    this.ctx.bindVertexArray(null)
     this.ctx.bindBuffer(this.ctx.ARRAY_BUFFER, null)
     this.ctx.bindBuffer(this.ctx.ELEMENT_ARRAY_BUFFER, null)
   }
