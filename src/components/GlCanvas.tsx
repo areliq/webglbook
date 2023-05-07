@@ -38,7 +38,7 @@ class WebGL2Square {
   private locations: {
     [key: string]: number
   }
-  private squareIndices = [0, 1, 2, 0, 2, 3]  // counter-clockwise
+  private indices = [0, 1, 2, 0, 2, 3]  // counter-clockwise
   private vao: WebGLVertexArrayObject
 
   constructor(canvas: HTMLCanvasElement | null) {
@@ -64,7 +64,7 @@ class WebGL2Square {
     this.program = program
     this.vao = vao
     this.locations = this.getLocations()
-    this.buffers = this.getBuffersForSquare()
+    this.buffers = this.initBuffersForTrapezoid()
   }
 
   private assignShader(source: string, type: 'vertex' | 'fragment') {
@@ -104,14 +104,19 @@ class WebGL2Square {
     this.ctx.clearColor(0, 0, 0, 1)  // black
   }
 
-  private getBuffersForSquare() {
-    const topLeft = [-0.5, 0.5, 0]
-    const bottomLeft = [-0.5, -0.5, 0]
-    const bottomRight = [0.5, -0.5, 0]
-    const topRight = [0.5, 0.5, 0]
-
+  private initBuffersForTrapezoid() {
     const vertices = [
-      ...topLeft, ...bottomLeft, ...bottomRight, ...topRight
+      -0.5, -0.5, 0,
+      -0.25, 0.5, 0,
+      0.0, -0.5, 0,
+      0.25, 0.5, 0,
+      0.5, -0.5, 0,
+    ]
+
+    const indices = [
+      0, 1, 2,
+      0, 2, 3,
+      2, 3, 4,
     ]
 
     this.ctx.bindVertexArray(this.vao)
@@ -127,12 +132,56 @@ class WebGL2Square {
     // Setup Index Buffer Object
     const ibo = this.ctx.createBuffer()
     this.ctx.bindBuffer(this.ctx.ELEMENT_ARRAY_BUFFER, ibo)
-    this.ctx.bufferData(this.ctx.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.squareIndices), this.ctx.STATIC_DRAW)
+    this.ctx.bufferData(this.ctx.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), this.ctx.STATIC_DRAW)
 
     // Clear used buffer
     this.ctx.bindVertexArray(null)
     this.ctx.bindBuffer(this.ctx.ARRAY_BUFFER, null)
     this.ctx.bindBuffer(this.ctx.ELEMENT_ARRAY_BUFFER, null)
+
+    // TODO: refactor
+    this.indices = indices
+
+    return {
+      vertex: vbo,
+      index: ibo,
+    }
+  }
+
+  private initBuffersForSquare() {
+    const topLeft = [-0.5, 0.5, 0]
+    const bottomLeft = [-0.5, -0.5, 0]
+    const bottomRight = [0.5, -0.5, 0]
+    const topRight = [0.5, 0.5, 0]
+
+    const vertices = [
+      ...topLeft, ...bottomLeft, ...bottomRight, ...topRight
+    ]
+
+    const indices = [0, 1, 2, 0, 2, 3]
+
+    this.ctx.bindVertexArray(this.vao)
+
+    // Setup Vertex Buffer Object
+    const vbo = this.ctx.createBuffer()
+    this.ctx.bindBuffer(this.ctx.ARRAY_BUFFER, vbo)
+    this.ctx.bufferData(this.ctx.ARRAY_BUFFER, new Float32Array(vertices), this.ctx.STATIC_DRAW)
+
+    this.ctx.enableVertexAttribArray(this.locations['aVertexPosition'])
+    this.ctx.vertexAttribPointer(this.locations['aVertexPosition'], 3, this.ctx.FLOAT, false, 0, 0)
+    
+    // Setup Index Buffer Object
+    const ibo = this.ctx.createBuffer()
+    this.ctx.bindBuffer(this.ctx.ELEMENT_ARRAY_BUFFER, ibo)
+    this.ctx.bufferData(this.ctx.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), this.ctx.STATIC_DRAW)
+
+    // Clear used buffer
+    this.ctx.bindVertexArray(null)
+    this.ctx.bindBuffer(this.ctx.ARRAY_BUFFER, null)
+    this.ctx.bindBuffer(this.ctx.ELEMENT_ARRAY_BUFFER, null)
+
+    // TODO: refactor
+    this.indices = indices
 
     return {
       vertex: vbo,
@@ -154,7 +203,7 @@ class WebGL2Square {
 
     this.ctx.bindBuffer(this.ctx.ELEMENT_ARRAY_BUFFER, this.buffers.index)
 
-    this.ctx.drawElements(this.ctx.TRIANGLES, this.squareIndices.length, this.ctx.UNSIGNED_SHORT, 0)
+    this.ctx.drawElements(this.ctx.TRIANGLES, this.indices.length, this.ctx.UNSIGNED_SHORT, 0)
     
     // Clear used buffer
     this.ctx.bindVertexArray(null)
